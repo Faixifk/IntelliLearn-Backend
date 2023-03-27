@@ -259,13 +259,18 @@ class TeacherClassesAPIView(APIView):
 
         teacher_ID = data['teacher_ID']
 
-        classes = classModel.objects.get(teacher_ID = teacher_ID)
+        try:
+            classes = classModel.objects.filter(teacher_ID = teacher_ID)
+        except:
+            return Response("No Classes Exist", status=404)
 
         if classes:
 
             serializer = ClassSerializer(classes, many=True)
             return Response(serializer.data, status=200)
+        
         else:
+        
             return Response("Error loading data!", status=400)
 
 
