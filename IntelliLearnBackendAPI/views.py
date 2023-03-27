@@ -2,11 +2,11 @@ from django.shortcuts import render
 from django.http import HttpResponse
 from rest_framework.views import APIView
 from IntelliLearnBackendAPI.modelserializers import McqSerializer
-from IntelliLearnBackendAPI.modelserializers import StudentSerializer, ClassSerializer
+from IntelliLearnBackendAPI.modelserializers import StudentSerializer, ClassSerializer, TeacherSerializer
 from rest_framework.response import Response
 import rest_framework.request
 from IntelliLearnBackendAPI.models import McqModel
-from IntelliLearnBackendAPI.models import StudentModel, classModel
+from IntelliLearnBackendAPI.models import StudentModel, classModel, TeacherModel
 
 # Create your views here.
 def home(request):
@@ -151,6 +151,122 @@ class StudentsAPIView(APIView):
             data = {"response" : "Student does not exist!"}
             return Response(data, status=400)
 
+class TeacherAPIView(APIView):
+
+    def post(self, request):
+
+        print()
+        print()
+        print("Posted Data: ", request.data)
+        print("request.query_params: ", request.query_params, end="\n\n")
+
+        print("len Data: ", len(request.data))
+        print("len request.query_params: ", len(request.query_params), end="\n\n")
+
+
+        if len(request.query_params) > 0:
+            data = request.query_params
+        elif len(request.data) > 0:
+            data = request.data
+
+        serializer = TeacherSerializer(data = data)
+
+        if serializer.is_valid():
+
+            serializer.save()
+            return Response(serializer.data, status=200)
+ 
+        return Response(serializer.errors, status=400)
+
+
+    def get(self, request):
+
+        teachers = TeacherModel.objects.all()
+
+        if teachers:
+
+            serializer = TeacherSerializer(teachers, many=True)
+            return Response(serializer.data, status=200)
+        else:
+            return Response("Error loading data!", status=400)
+
+    def delete(self, request):
+
+        id = request.query_params['teacher_ID']
+
+        try:
+            
+            teacher = TeacherModel.objects.get(teacher_ID = id)
+
+            if teacher:
+
+                teacher.delete()
+                data = {"response" : "Teacher data deleted successfully!"}
+                return Response(data, status=200)
+
+        except TeacherModel.DoesNotExist:
+        
+            data = {"response" : "Teacher does not exist!"}
+            return Response(data, status=400)
+
+class TeacherLoginAPIView(APIView):
+
+    def post(self, request):
+
+        # print()
+        # print()
+        # print("Data: ", request.data)
+        # print("request.query_params: ", request.query_params, end="\n\n")
+
+        # print("len Data: ", len(request.data))
+        # print("len request.query_params: ", len(request.query_params), end="\n\n")
+
+        if len(request.query_params) > 0:
+            data = request.query_params
+        elif len(request.data) > 0:
+            data = request.data
+
+        email = data['email']
+        password = data['password']
+
+        try:
+            teacher = TeacherModel.objects.get(email = email)
+
+            try:
+                teacher = TeacherModel.objects.get(email = email, password = password)
+                serializer = TeacherSerializer(teacher, many=False)
+                data = {"response" : "Success", "data": serializer.data}
+                return Response(data, status=200)
+        
+            except:
+                data = {"response" : "Failure", "reason" : "Incorrect password!"}
+                return Response(data, status=400)
+
+
+        except:
+            data = {"response" : "Failure", "reason" : "Email not registered!"}
+            return Response(data, status=400)
+
+#class to add, remove, select, and update teacher teaching classes
+class TeacherClassesAPIView(APIView):
+
+    def get(self, request):
+
+        if len(request.query_params) > 0:
+            data = request.query_params
+        elif len(request.data) > 0:
+            data = request.data
+
+        teacher_ID = data['teacher_ID']
+
+        classes = classModel.objects.get(teacher_ID = teacher_ID)
+
+        if classes:
+
+            serializer = ClassSerializer(classes, many=True)
+            return Response(serializer.data, status=200)
+        else:
+            return Response("Error loading data!", status=400)
 
 
 class ClassesAPIView(APIView):
