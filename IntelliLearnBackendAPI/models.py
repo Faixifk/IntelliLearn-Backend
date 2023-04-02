@@ -50,6 +50,14 @@ class AttendanceModel(models.Model):
     student = models.ForeignKey(StudentModel, default=None, on_delete=models.DO_NOTHING)
     status = models.CharField(max_length=1, blank=False, default='P')
 
+class TeacherAttendance(models.Model):
+
+    attendance_ID = models.AutoField(primary_key=True)
+    date = models.DateField()
+    teacher_class = models.ForeignKey(classModel, default=None, on_delete=models.DO_NOTHING)
+    teacher = models.ForeignKey(TeacherModel, default=None, on_delete=models.DO_NOTHING)
+    status = models.CharField(max_length=1, blank=False, default='P')
+
 class EnrollmentModel(models.Model):
 
     enrollment_ID = models.AutoField(primary_key=True)

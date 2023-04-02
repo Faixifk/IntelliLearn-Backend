@@ -5,6 +5,7 @@ from IntelliLearnBackendAPI.models import classModel
 from IntelliLearnBackendAPI.models import TeacherModel
 from IntelliLearnBackendAPI.models import AttendanceModel
 from IntelliLearnBackendAPI.models import EnrollmentModel
+from IntelliLearnBackendAPI.models import TeacherAttendance
 from IntelliLearnBackendAPI.models import MarksModel
 
 class McqSerializer(serializers.ModelSerializer):
@@ -55,4 +56,11 @@ class MarksSerializer(serializers.ModelSerializer):
     class Meta:
 
         model = MarksModel
+        fields = '__all__'
+
+class TeacherAttendanceSerializer(serializers.ModelSerializer):
+
+    class Meta:
+
+        model = TeacherAttendance
         fields = '__all__'

@@ -2,11 +2,23 @@ from django.shortcuts import render
 from django.http import HttpResponse
 from rest_framework.views import APIView
 from IntelliLearnBackendAPI.modelserializers import McqSerializer
-from IntelliLearnBackendAPI.modelserializers import StudentSerializer, ClassSerializer, TeacherSerializer
+from IntelliLearnBackendAPI.modelserializers import StudentSerializer, ClassSerializer, TeacherSerializer, MarksSerializer, TeacherAttendanceSerializer
 from rest_framework.response import Response
 import rest_framework.request
 from IntelliLearnBackendAPI.models import McqModel
-from IntelliLearnBackendAPI.models import StudentModel, classModel, TeacherModel
+from IntelliLearnBackendAPI.models import StudentModel, classModel, TeacherModel, MarksModel
+from IntelliLearnBackendAPI.models import TeacherAttendance
+
+import torch
+from transformers import BertForQuestionAnswering
+from transformers import BertTokenizer
+
+#Model
+model = BertForQuestionAnswering.from_pretrained('bert-large-uncased-whole-word-masking-finetuned-squad')
+
+#Tokenizer
+tokenizer = BertTokenizer.from_pretrained('bert-large-uncased-whole-word-masking-finetuned-squad')
+
 
 # Create your views here.
 def home(request):
@@ -273,6 +285,97 @@ class TeacherClassesAPIView(APIView):
         
             return Response("Error loading data!", status=400)
 
+#API to answer questions using bert
+#takes question and context as input
+class QuestionAnswering(APIView):
+
+    def post(self, request):
+
+        if len(request.query_params) > 0:
+            data = request.query_params
+        elif len(request.data) > 0:
+            data = request.data
+
+        question = data['question']
+        #context = data['context']
+
+        context = '''
+            Physics is a branch of Science that 
+            deals with matter, energy and their 
+            relationship.
+            Some main branches of Physics 
+            are mechanics, heat, sound, light 
+            (optics), electricity and magnetism, 
+            nuclear physics and quantum 
+            physics.
+            Physics plays an important role in 
+            our daily life. For example, 
+            electricity is widely used 
+            everywhere, domestic appliances, 
+            office equipments, machines used 
+            in industry, means of transport and 
+            communication etc. work on the 
+            basic laws and principles of 
+            Physics.
+            A measurable quantity is called a 
+            physical quantity.
+            Base quantities are defined 
+            independently. Seven quantities 
+            are selected as base quantities. 
+            These are length, time, mass, 
+            electric current, temperature, 
+            intensity of light and the amount of 
+            a substance
+        '''
+
+        input_ids = tokenizer.encode(question, context)
+        print (f'We have about {len(input_ids)} tokens generated')
+
+        tokens = tokenizer.convert_ids_to_tokens(input_ids)
+        print(" ")
+        print('Some examples of token-input_id pairs:')
+
+        for i, (token,inp_id) in enumerate(zip(tokens,input_ids)):
+            
+            print(token,":",inp_id)
+        sep_idx = tokens.index('[SEP]')
+
+        # we will provide including [SEP] token which seperates question from context and 1 for rest.
+        token_type_ids = [0 for i in range(sep_idx+1)] + [1 for i in range(sep_idx+1,len(tokens))]
+        print(token_type_ids)
+
+        # Run our example through the model.
+        out = model(torch.tensor([input_ids]), # The tokens representing our input text.
+                        token_type_ids=torch.tensor([token_type_ids]))
+
+        start_logits,end_logits = out['start_logits'],out['end_logits']
+        # Find the tokens with the highest `start` and `end` scores.
+        answer_start = torch.argmax(start_logits)
+        answer_end = torch.argmax(end_logits)
+
+        ans = ' '.join(tokens[answer_start:answer_end + 1])
+        print('Predicted answer:', ans)
+
+        if len(ans) < 1:
+
+            ans = "Oops! I got confused.."
+
+        return Response(ans, status=200)
+
+    # #another version for longer text
+    # def get(self, request):
+
+    #     if len(request.query_params) > 0:
+    #         data = request.query_params
+    #     elif len(request.data) > 0:
+    #         data = request.data
+
+    #     question = data['question']
+    #     context = data['context']
+
+
+    #     return Response(ans, status=200)
+
 
 class ClassesAPIView(APIView):
 
@@ -322,3 +425,83 @@ class ClassesAPIView(APIView):
         
             data = {"response" : "Class does not exist!"}
             return Response(data, status=400)
+        
+#API to get marks by evaluation for a whole class
+#inputs: {class_level, section, subject, evaluationType}
+class MarksByEvaluationType(APIView):
+
+    def get(self, request):
+
+        if len(request.query_params) > 0:
+            data = request.query_params
+        elif len(request.data) > 0:
+            data = request.data
+
+        class_level = data['class_level']
+        section = data['section']
+        subject = data['subject']
+        evaluationType = data['evaluationType']
+
+        try:
+            forClass = classModel.objects.get(class_level = class_level, section = section, subject = subject)
+
+            if forClass: 
+
+                try:
+                    marks = MarksModel.objects.filter(class_ID = forClass.class_ID, evaluationType = evaluationType)
+
+                    if marks:
+                        serializer = MarksSerializer(marks, many=True)
+                        return Response(serializer.data, status=200)
+
+                    else:
+                        return Response("Marks for requested class not available", status=404)
+
+                except:
+                    return Response("Marks for requested class not available", status=404)
+            else:
+                return Response("No data exists!", status=404)
+        except:
+            return Response("No Such Class Found", status=404)
+
+# Mark and Retrieve teacher attendance
+class TeacherAttendanceView(APIView):
+
+    def get(self, request):
+
+        if len(request.query_params) > 0:
+            data = request.query_params
+        elif len(request.data) > 0:
+            data = request.data
+
+        teacher_id = data['teacher'] #retrieve attendance by email
+
+        teacher = TeacherModel.objects.get(teacher_ID=teacher_id)
+
+        try:
+            attendance = TeacherAttendance.objects.filter(teacher = teacher)
+
+        except:
+
+            return Response("No attendance record!", status=404)
+
+        
+        serializer = TeacherAttendanceSerializer(attendance, many=True)
+        return Response(serializer.data, status=200)
+
+    def post(self, request):
+
+        if len(request.query_params) > 0:
+            data = request.query_params
+        elif len(request.data) > 0:
+            data = request.data
+
+        serializer = TeacherAttendanceSerializer(data = data)
+
+        if serializer.is_valid():
+
+            serializer.save()
+            return Response(serializer.data, status=200)
+ 
+        return Response(serializer.errors, status=400)
+
