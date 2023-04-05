@@ -167,15 +167,6 @@ class TeacherAPIView(APIView):
 
     def post(self, request):
 
-        print()
-        print()
-        print("Posted Data: ", request.data)
-        print("request.query_params: ", request.query_params, end="\n\n")
-
-        print("len Data: ", len(request.data))
-        print("len request.query_params: ", len(request.query_params), end="\n\n")
-
-
         if len(request.query_params) > 0:
             data = request.query_params
         elif len(request.data) > 0:
@@ -186,9 +177,11 @@ class TeacherAPIView(APIView):
         if serializer.is_valid():
 
             serializer.save()
-            return Response(serializer.data, status=200)
+            data = {"response" : "Success", "data": serializer.data}
+            return Response(data, status=200)
  
-        return Response(serializer.errors, status=400)
+        data = {"response" : "Failure", "data": serializer.errors}
+        return Response(data, status=400)
 
 
     def get(self, request):

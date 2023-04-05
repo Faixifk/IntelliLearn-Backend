@@ -19,7 +19,7 @@ class TeacherModel(models.Model):
 
     teacher_ID	= models.AutoField(primary_key=True)
     
-    email = models.CharField(max_length=50, blank=False, default='None')
+    email = models.CharField(unique=True, max_length=50, blank=False, default='None')
     password = models.CharField(max_length=50, blank=False, default='None')
 
     name = models.CharField(max_length=50, blank=False, default='None')
