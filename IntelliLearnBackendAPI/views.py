@@ -12,6 +12,7 @@ from IntelliLearnBackendAPI.models import TeacherAttendance
 import torch
 from transformers import BertForQuestionAnswering
 from transformers import BertTokenizer
+import openai
 
 #Model
 model = BertForQuestionAnswering.from_pretrained('bert-large-uncased-whole-word-masking-finetuned-squad')
@@ -498,3 +499,36 @@ class TeacherAttendanceView(APIView):
  
         return Response(serializer.errors, status=400)
 
+# Mark and Retrieve teacher attendance
+class AskChatGPT(APIView):
+
+    def get(self, request):
+
+        if len(request.query_params) > 0:
+            data = request.query_params
+        elif len(request.data) > 0:
+            data = request.data
+
+        question = data['question'] 
+
+        # Set up the OpenAI API client
+        openai.api_key = "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"
+
+        # Set up the model and prompt
+        model_engine = "text-davinci-003"
+        prompt = question
+
+        # Generate a response
+        completion = openai.Completion.create(
+            engine=model_engine,
+            prompt=prompt,
+            max_tokens=1024,
+            n=1,
+            stop=None,
+            temperature=0.5,
+        )
+
+        response = completion.choices[0].text
+        print(response)
+
+        return Response(response, status=200)
