@@ -74,3 +74,12 @@ class MarksModel(models.Model):
     evaluationType = models.CharField(max_length=20)
     totalMarks = models.IntegerField()
     obtainedMarks = models.IntegerField()
+
+class TeacherSchedule(models.Model):
+
+    teacher = models.ForeignKey(TeacherModel, default=None, on_delete=models.DO_NOTHING)
+    Class = models.ForeignKey(classModel, default=None, on_delete=models.DO_NOTHING)
+    weekday = models.CharField(max_length=10)
+    startTime = models.TimeField()
+    durationMinutes = models.IntegerField()
+    roomNumber = models.CharField(max_length=10)

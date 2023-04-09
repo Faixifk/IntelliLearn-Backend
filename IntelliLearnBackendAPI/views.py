@@ -8,6 +8,8 @@ import rest_framework.request
 from IntelliLearnBackendAPI.models import McqModel
 from IntelliLearnBackendAPI.models import StudentModel, classModel, TeacherModel, MarksModel
 from IntelliLearnBackendAPI.models import TeacherAttendance
+from IntelliLearnBackendAPI.models import TeacherSchedule
+from IntelliLearnBackendAPI.modelserializers import TeacherScheduleSerializer, TeacherAttendancePostSerializer, TeacherScheduleGetSerializer
 
 import torch
 from transformers import BertForQuestionAnswering
@@ -468,12 +470,30 @@ class TeacherAttendanceView(APIView):
         elif len(request.data) > 0:
             data = request.data
 
-        teacher_id = data['teacher'] #retrieve attendance by email
+        print(data)
+
+        teacher_id = data['teacher_ID'] #retrieve attendance by email
+        attendance_type = data['attendance_type']
+
+        print(teacher_id + " " + attendance_type)
 
         teacher = TeacherModel.objects.get(teacher_ID=teacher_id)
 
         try:
-            attendance = TeacherAttendance.objects.filter(teacher = teacher)
+
+            if attendance_type == "Overall":
+            
+                attendance = TeacherAttendance.objects.filter(teacher = teacher)
+            
+            else:
+
+                class_details = str(attendance_type).split(" ")
+                
+                class_level, section, subject = class_details[1], class_details[3], class_details[4]
+                classObj = classModel.objects.get(class_level = class_level, section = section, subject = subject)
+                class_id = classObj.class_ID
+
+                attendance = TeacherAttendance.objects.filter(teacher = teacher, teacher_class_id = class_id)
 
         except:
 
@@ -490,7 +510,7 @@ class TeacherAttendanceView(APIView):
         elif len(request.data) > 0:
             data = request.data
 
-        serializer = TeacherAttendanceSerializer(data = data)
+        serializer = TeacherAttendancePostSerializer(data = data)
 
         if serializer.is_valid():
 
@@ -532,3 +552,44 @@ class AskChatGPT(APIView):
         print(response)
 
         return Response(response, status=200)
+
+# Mark and Retrieve teacher attendance
+class TeacherScheduleView(APIView):
+
+    def get(self, request):
+
+        if len(request.query_params) > 0:
+            data = request.query_params
+        elif len(request.data) > 0:
+            data = request.data
+
+        teacher_id = data['teacher_ID'] #retrieve attendance 
+        teacher = TeacherModel.objects.get(teacher_ID=teacher_id)
+
+        try:
+
+            schedule = TeacherSchedule.objects.filter(teacher = teacher)
+
+        except:
+
+            return Response("No schedule record!", status=404)
+
+        
+        serializer = TeacherScheduleGetSerializer(schedule, many=True)
+        return Response(serializer.data, status=200)
+
+    def post(self, request):
+
+        if len(request.query_params) > 0:
+            data = request.query_params
+        elif len(request.data) > 0:
+            data = request.data
+
+        serializer = TeacherScheduleSerializer(data = data)
+
+        if serializer.is_valid():
+
+            serializer.save()
+            return Response(serializer.data, status=200)
+ 
+        return Response(serializer.errors, status=400)
