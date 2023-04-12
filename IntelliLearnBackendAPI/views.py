@@ -10,6 +10,8 @@ from IntelliLearnBackendAPI.models import StudentModel, classModel, TeacherModel
 from IntelliLearnBackendAPI.models import TeacherAttendance
 from IntelliLearnBackendAPI.models import TeacherSchedule
 from IntelliLearnBackendAPI.modelserializers import TeacherScheduleSerializer, TeacherAttendancePostSerializer, TeacherScheduleGetSerializer
+from IntelliLearnBackendAPI.modelserializers import TeacherAnnouncementSerializer
+from IntelliLearnBackendAPI.models import TeacherAnnouncement
 
 import torch
 from transformers import BertForQuestionAnswering
@@ -593,3 +595,63 @@ class TeacherScheduleView(APIView):
             return Response(serializer.data, status=200)
  
         return Response(serializer.errors, status=400)
+    
+
+
+class TeacherAnnouncementsAPIView(APIView):
+
+    def post(self, request):
+
+        if len(request.query_params) > 0:
+            data = request.query_params
+        elif len(request.data) > 0:
+            data = request.data
+
+        serializer = TeacherAnnouncementSerializer(data = data)
+
+        if serializer.is_valid():
+
+            serializer.save() #stores the data in the database
+            return Response(serializer.data, status=200)
+ 
+        return Response(serializer.errors, status=400)
+
+
+    def get(self, request):
+
+        if len(request.query_params) > 0:
+            data = request.query_params
+        elif len(request.data) > 0:
+            data = request.data
+
+        teacher_ID = data['author']
+        teacher = TeacherModel.objects.get(teacher_ID = teacher_ID)
+
+        announcements = TeacherAnnouncement.objects.filter(author = teacher)
+
+        if announcements:
+
+            serializer = TeacherAnnouncementSerializer(announcements, many=True)
+            return Response(serializer.data, status=200)
+        
+        else:
+            return Response("Error loading data!", status=400)
+
+    def delete(self, request):
+
+        id = request.query_params['announcement_ID']
+
+        try:
+            
+            announcement = TeacherAnnouncement.objects.get(announcement_ID = id)
+
+            if announcement:
+
+                announcement.delete() #data deleted from database
+                data = {"response" : "Announcement deleted successfully!"}
+                return Response(data, status=200)
+
+        except TeacherAnnouncement.DoesNotExist:
+        
+            data = {"response" : "Announcement does not exist!"}
+            return Response(data, status=400)

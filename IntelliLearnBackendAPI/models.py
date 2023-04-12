@@ -83,3 +83,12 @@ class TeacherSchedule(models.Model):
     startTime = models.TimeField()
     durationMinutes = models.IntegerField()
     roomNumber = models.CharField(max_length=10)
+
+class TeacherAnnouncement(models.Model):
+
+    announcement_ID = models.AutoField(primary_key=True)
+    title = models.CharField(max_length=100)
+    date_posted = models.DateField()
+    author = models.ForeignKey(TeacherModel, default=None, on_delete=models.DO_NOTHING)
+    content = models.CharField(max_length=500)
+    class_ID = models.ForeignKey(classModel, default=None, on_delete=models.DO_NOTHING)

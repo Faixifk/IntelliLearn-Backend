@@ -8,6 +8,7 @@ from IntelliLearnBackendAPI.models import EnrollmentModel
 from IntelliLearnBackendAPI.models import TeacherAttendance
 from IntelliLearnBackendAPI.models import MarksModel
 from IntelliLearnBackendAPI.models import TeacherSchedule
+from IntelliLearnBackendAPI.models import TeacherAnnouncement
 
 class McqSerializer(serializers.ModelSerializer):
 
@@ -107,3 +108,11 @@ class TeacherScheduleGetSerializer(serializers.ModelSerializer):
 
         model = TeacherSchedule
         fields = ['id', 'weekday', 'startTime', 'durationMinutes', 'roomNumber', 'class_level', 'section', 'subject']
+
+class TeacherAnnouncementSerializer(serializers.ModelSerializer):
+
+    class Meta:
+
+        model = TeacherAnnouncement
+        fields = '__all__'
+
