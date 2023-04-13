@@ -110,9 +110,9 @@ class TeacherScheduleGetSerializer(serializers.ModelSerializer):
         fields = ['id', 'weekday', 'startTime', 'durationMinutes', 'roomNumber', 'class_level', 'section', 'subject']
 
 class TeacherAnnouncementSerializer(serializers.ModelSerializer):
+    author = TeacherSerializer(read_only=True)
+    class_ID = ClassSerializer(read_only=True)
 
     class Meta:
-
         model = TeacherAnnouncement
         fields = '__all__'
-

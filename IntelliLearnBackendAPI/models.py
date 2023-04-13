@@ -92,3 +92,8 @@ class TeacherAnnouncement(models.Model):
     author = models.ForeignKey(TeacherModel, default=None, on_delete=models.DO_NOTHING)
     content = models.CharField(max_length=500)
     class_ID = models.ForeignKey(classModel, default=None, on_delete=models.DO_NOTHING)
+
+class BluetoothStudentMappings(models.Model):
+
+    mac_address = models.CharField(primary_key=True)
+    student = models.ForeignKey(StudentModel, default=None, on_delete=models.DO_NOTHING)
