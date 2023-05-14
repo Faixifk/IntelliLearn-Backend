@@ -9,6 +9,7 @@ from IntelliLearnBackendAPI.models import TeacherAttendance
 from IntelliLearnBackendAPI.models import MarksModel
 from IntelliLearnBackendAPI.models import TeacherSchedule
 from IntelliLearnBackendAPI.models import TeacherAnnouncement
+from IntelliLearnBackendAPI.models import UploadedBook
 
 class McqSerializer(serializers.ModelSerializer):
 
@@ -116,3 +117,10 @@ class TeacherAnnouncementSerializer(serializers.ModelSerializer):
     class Meta:
         model = TeacherAnnouncement
         fields = '__all__'
+
+
+
+class UploadedBookSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UploadedBook
+        fields = ('title', 'pdf_file', 'className')

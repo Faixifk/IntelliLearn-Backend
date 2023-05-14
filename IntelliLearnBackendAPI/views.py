@@ -1,5 +1,8 @@
 from django.shortcuts import render
 from django.http import HttpResponse
+from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework import status
+
 from rest_framework.views import APIView
 from IntelliLearnBackendAPI.modelserializers import McqSerializer
 from IntelliLearnBackendAPI.modelserializers import StudentSerializer, ClassSerializer, TeacherSerializer, MarksSerializer, TeacherAttendanceSerializer
@@ -11,12 +14,19 @@ from IntelliLearnBackendAPI.models import TeacherAttendance
 from IntelliLearnBackendAPI.models import TeacherSchedule
 from IntelliLearnBackendAPI.modelserializers import TeacherScheduleSerializer, TeacherAttendancePostSerializer, TeacherScheduleGetSerializer
 from IntelliLearnBackendAPI.modelserializers import TeacherAnnouncementSerializer
+from IntelliLearnBackendAPI.modelserializers import UploadedBookSerializer
 from IntelliLearnBackendAPI.models import TeacherAnnouncement
+from IntelliLearnBackendAPI.models import UploadedBook
 
 import torch
 from transformers import BertForQuestionAnswering
 from transformers import BertTokenizer
 import openai
+
+import sys
+sys.path.append('/customLibraries')
+
+from .customLibraries import BookProcessor
 
 #Model
 model = BertForQuestionAnswering.from_pretrained('bert-large-uncased-whole-word-masking-finetuned-squad')
@@ -286,79 +296,96 @@ class TeacherClassesAPIView(APIView):
 #API to answer questions using bert
 #takes question and context as input
 class QuestionAnswering(APIView):
-
     def post(self, request):
-
         if len(request.query_params) > 0:
             data = request.query_params
         elif len(request.data) > 0:
             data = request.data
 
         question = data['question']
-        #context = data['context']
+        classBook = data['class']
 
-        context = '''
-            Physics is a branch of Science that 
-            deals with matter, energy and their 
-            relationship.
-            Some main branches of Physics 
-            are mechanics, heat, sound, light 
-            (optics), electricity and magnetism, 
-            nuclear physics and quantum 
-            physics.
-            Physics plays an important role in 
-            our daily life. For example, 
-            electricity is widely used 
-            everywhere, domestic appliances, 
-            office equipments, machines used 
-            in industry, means of transport and 
-            communication etc. work on the 
-            basic laws and principles of 
-            Physics.
-            A measurable quantity is called a 
-            physical quantity.
-            Base quantities are defined 
-            independently. Seven quantities 
-            are selected as base quantities. 
-            These are length, time, mass, 
-            electric current, temperature, 
-            intensity of light and the amount of 
-            a substance
-        '''
+        title, className = classBook.split(' / ')
 
-        input_ids = tokenizer.encode(question, context)
-        print (f'We have about {len(input_ids)} tokens generated')
+        book = UploadedBook.objects.filter(title=title, className=className).first()
+        if book is None:
+            return Response("Class book not found", status=400)
 
-        tokens = tokenizer.convert_ids_to_tokens(input_ids)
-        print(" ")
-        print('Some examples of token-input_id pairs:')
+        print("EXTRACTED FILE PATH: ", book.txt_path)
 
-        for i, (token,inp_id) in enumerate(zip(tokens,input_ids)):
-            
-            print(token,":",inp_id)
-        sep_idx = tokens.index('[SEP]')
-
-        # we will provide including [SEP] token which seperates question from context and 1 for rest.
-        token_type_ids = [0 for i in range(sep_idx+1)] + [1 for i in range(sep_idx+1,len(tokens))]
-        print(token_type_ids)
-
-        # Run our example through the model.
-        out = model(torch.tensor([input_ids]), # The tokens representing our input text.
-                        token_type_ids=torch.tensor([token_type_ids]))
-
-        start_logits,end_logits = out['start_logits'],out['end_logits']
-        # Find the tokens with the highest `start` and `end` scores.
-        answer_start = torch.argmax(start_logits)
-        answer_end = torch.argmax(end_logits)
-
-        ans = ' '.join(tokens[answer_start:answer_end + 1])
-        print('Predicted answer:', ans)
+        bookProcessor = BookProcessor.BookProcessor()
+        ans = bookProcessor.answer_from_book(book.txt_path, question) #BERT
+        #ans = bookProcessor.answer_from_book_using_distilbert(book.txt_path, question) #DistilBert
 
         if len(ans) < 1:
-
             ans = "Oops! I got confused.."
 
         return Response(ans, status=200)
+
+        #context = data['context']
+
+        # context = '''
+        #     Physics is a branch of Science that 
+        #     deals with matter, energy and their 
+        #     relationship.
+        #     Some main branches of Physics 
+        #     are mechanics, heat, sound, light 
+        #     (optics), electricity and magnetism, 
+        #     nuclear physics and quantum 
+        #     physics.
+        #     Physics plays an important role in 
+        #     our daily life. For example, 
+        #     electricity is widely used 
+        #     everywhere, domestic appliances, 
+        #     office equipments, machines used 
+        #     in industry, means of transport and 
+        #     communication etc. work on the 
+        #     basic laws and principles of 
+        #     Physics.
+        #     A measurable quantity is called a 
+        #     physical quantity.
+        #     Base quantities are defined 
+        #     independently. Seven quantities 
+        #     are selected as base quantities. 
+        #     These are length, time, mass, 
+        #     electric current, temperature, 
+        #     intensity of light and the amount of 
+        #     a substance
+        # '''
+
+        # input_ids = tokenizer.encode(question, context)
+        # print (f'We have about {len(input_ids)} tokens generated')
+
+        # tokens = tokenizer.convert_ids_to_tokens(input_ids)
+        # print(" ")
+        # print('Some examples of token-input_id pairs:')
+
+        # for i, (token,inp_id) in enumerate(zip(tokens,input_ids)):
+            
+        #     print(token,":",inp_id)
+        # sep_idx = tokens.index('[SEP]')
+
+        # # we will provide including [SEP] token which seperates question from context and 1 for rest.
+        # token_type_ids = [0 for i in range(sep_idx+1)] + [1 for i in range(sep_idx+1,len(tokens))]
+        # print(token_type_ids)
+
+        # # Run our example through the model.
+        # out = model(torch.tensor([input_ids]), # The tokens representing our input text.
+        #                 token_type_ids=torch.tensor([token_type_ids]))
+
+        # start_logits,end_logits = out['start_logits'],out['end_logits']
+        # # Find the tokens with the highest `start` and `end` scores.
+        # answer_start = torch.argmax(start_logits)
+        # answer_end = torch.argmax(end_logits)
+
+        # ans = ' '.join(tokens[answer_start:answer_end + 1])
+        # print('Predicted answer:', ans)
+
+        # if len(ans) < 1:
+
+        #     ans = "Oops! I got confused.."
+
+        # return Response(ans, status=200)
 
     # #another version for longer text
     # def get(self, request):
@@ -655,3 +682,39 @@ class TeacherAnnouncementsAPIView(APIView):
         
             data = {"response" : "Announcement does not exist!"}
             return Response(data, status=400)
+
+#API for uploading a book
+class UploadBookView(APIView):
+    parser_classes = (MultiPartParser, FormParser)
+
+    def post(self, request, *args, **kwargs):
+        file_serializer = UploadedBookSerializer(data=request.data)
+        if file_serializer.is_valid():
+            file_serializer.save()
+            
+            # Get the uploaded book data
+            uploaded_book = file_serializer.instance
+            book_title = uploaded_book.title
+            class_name = uploaded_book.className
+            pdf_path = uploaded_book.pdf_file.path
+            
+            # Create a book processor
+            book_processor = BookProcessor.BookProcessor()
+            
+            # Preprocess the PDF book and get the TXT path
+            txt_path = book_processor.preprocess_pdf(pdf_path)
+            
+            # Save the TXT path in the database
+            uploaded_book.txt_path = txt_path
+            uploaded_book.save()
+
+            return Response(file_serializer.data, status=status.HTTP_201_CREATED)
+        else:
+            return Response(file_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class BookList(APIView):
+    def get(self, request):
+        books = UploadedBook.objects.all()
+        book_list = [f"{str(book.title)} / {str(book.className)}" for book in books]
+        return Response(book_list)

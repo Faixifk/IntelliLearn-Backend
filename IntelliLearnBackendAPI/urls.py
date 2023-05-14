@@ -15,6 +15,9 @@ urlpatterns = [
     path('askChatGPT', views.AskChatGPT.as_view(), name='askChatGPT'),
     path('loginTeacher', views.TeacherLoginAPIView.as_view(), name='loginTeacher'),
     path('addClass', views.ClassesAPIView.as_view(), name='addClass'),
+    path('upload_book/', views.UploadBookView.as_view(), name='upload_book'),
+    path('books/', views.BookList.as_view(), name='book-list'),
+
     path('', views.home, name='home')
 
 ]

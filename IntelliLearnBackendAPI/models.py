@@ -95,5 +95,12 @@ class TeacherAnnouncement(models.Model):
 
 class BluetoothStudentMappings(models.Model):
 
-    mac_address = models.CharField(primary_key=True)
+    mac_address = models.CharField(primary_key=True, max_length=100)
     student = models.ForeignKey(StudentModel, default=None, on_delete=models.DO_NOTHING)
+
+class UploadedBook(models.Model):
+    title = models.CharField(max_length=255)
+    pdf_file = models.FileField(upload_to='books/')
+    className = models.CharField(max_length=255)
+    txt_path = models.CharField(max_length=255, blank=True, null=True)
+
