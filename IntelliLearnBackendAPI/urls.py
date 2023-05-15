@@ -17,6 +17,7 @@ urlpatterns = [
     path('addClass', views.ClassesAPIView.as_view(), name='addClass'),
     path('upload_book/', views.UploadBookView.as_view(), name='upload_book'),
     path('books/', views.BookList.as_view(), name='book-list'),
+    path('upload_mcqs/', views.UploadMcqView.as_view(), name='upload_mcqs'),
 
     path('', views.home, name='home')
 

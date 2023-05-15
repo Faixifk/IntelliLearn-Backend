@@ -12,7 +12,9 @@ class McqModel(models.Model):
     correct_option = models.CharField(max_length=100, blank=False, default='None')	
     weight = models.IntegerField(blank=False, default=1)
 
-    unit_number = models.IntegerField(blank=False, default=-1)
+    bookName = models.CharField(max_length=100, blank=False, default='None')
+    className = models.CharField(max_length=100, blank=False, default='None')
+    chapter = models.IntegerField(blank=False, default=-1)
     topic = models.CharField(max_length=100, blank=False, default='None')	
 
 class TeacherModel(models.Model):

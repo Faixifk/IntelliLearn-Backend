@@ -27,6 +27,7 @@ import sys
 sys.path.append('/customLibraries')
 
 from .customLibraries import BookProcessor
+from .customLibraries import McqGenerator
 
 #Model
 model = BertForQuestionAnswering.from_pretrained('bert-large-uncased-whole-word-masking-finetuned-squad')
@@ -71,6 +72,7 @@ class McqsAPIView(APIView):
 
     def get(self, request):
 
+        print("here")
         mcqs = McqModel.objects.all()
 
         if mcqs:
@@ -718,3 +720,36 @@ class BookList(APIView):
         books = UploadedBook.objects.all()
         book_list = [f"{str(book.title)} / {str(book.className)}" for book in books]
         return Response(book_list)
+
+
+class UploadMcqView(APIView):
+    parser_classes = (MultiPartParser, FormParser)
+
+    def post(self, request, *args, **kwargs):
+        bookName = request.data.get('bookName')
+        className = request.data.get('className')
+        chapter = request.data.get('chapter')
+        txt_file = request.data.get('txt_file')
+
+        mcqGenerator = McqGenerator.MCQ_Generator()
+
+        # Access the file content from the InMemoryUploadedFile object
+        txt_content = txt_file.read().decode('utf-8')
+
+        # Call your function here and pass the file content as a string
+        mcqs = mcqGenerator.generate_MCQS(txt_content)
+        print("MCQS received")
+        for mcq in mcqs:
+            # Append bookName, className, and chapter to each mcq
+            mcq['bookName'] = bookName
+            mcq['className'] = className
+            mcq['chapter'] = chapter
+
+            mcq_serializer = McqSerializer(data=mcq)
+            if mcq_serializer.is_valid():
+                mcq_serializer.save()
+                print("saved")
+            else:
+                return Response(mcq_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({'status': 'success'}, status=status.HTTP_201_CREATED)
